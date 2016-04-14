@@ -1,5 +1,7 @@
 package com.sylvaingoutouly;
 
+import com.couchbase.client.core.lang.Tuple;
+import com.couchbase.client.core.lang.Tuple5;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.document.json.JsonObject;
@@ -68,24 +70,24 @@ public class N1QL {
 	@Test public void selectOnBeerAsyncAdvanced() {		
 		// Simple select on sample beer async bucket
 		Observable<AsyncN1qlQueryResult> beers = beerSample.async().query(simple(select("*").from(i("beer-sample")).limit(10)));
-		
-		Observable<N1qlResultHolder> holder = Observable.zip(
+
+		Observable<Tuple5> datas = Observable.zip(
 				beers.map(AsyncN1qlQueryResult::parseSuccess),
 				beers.flatMap(AsyncN1qlQueryResult::finalSuccess),
 				beers.flatMap(AsyncN1qlQueryResult::rows).map(AsyncN1qlQueryRow::value).toList()				,
 				beers.flatMap(results -> results.errors()).toList(),
 				beers.flatMap(AsyncN1qlQueryResult::info).map(N1qlMetrics::asJsonObject),
-				(parsed, status, values, errors, metrics) -> N1qlResultHolder.of(values, errors, parsed, status, metrics)));
+				(parsed, status, values, errors, metrics) -> Tuple.create(values, errors, parsed, status, metrics));
 
-		holder.subscribe(queryResult -> {
-			err.println("RESULTS : " + queryResult.getResults());
-			err.println("ERRORS : " + queryResult.getErrors());
-			err.println("PARSE STATUS : " + queryResult.isParsed());
-			err.println("FINAL STATUS : " + queryResult.isSuccess());
-			err.println("METRICS : " + queryResult.getMetrics());
+		datas.subscribe(queryResult -> {
+			err.println("RESULTS : " + queryResult.value3());
+			err.println("ERRORS : " + queryResult.value4());
+			err.println("PARSE STATUS : " + queryResult.value1());
+			err.println("FINAL STATUS : " + queryResult.value2());
+			err.println("METRICS : " + queryResult.value5());
 		});
 
-		holder.toBlocking().singleOrDefault(null); // We block to force junit into waiting for the result
+		datas.toBlocking().singleOrDefault(null); // We block to force junit into waiting for the result
 	}
 	
 	
